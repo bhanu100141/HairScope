@@ -2,28 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'configure-server',
-      configureServer(server) {
-        return () => {
-          server.middlewares.use((req, res, next) => {
-            if (req.url && !req.url.startsWith('/@') && !req.url.startsWith('/node_modules') && !req.url.match(/\.[a-zA-Z]+$/)) {
-              req.url = '/';
-            }
-            next();
-          });
-        };
-      },
-    },
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+export default defineConfig(({ mode }) => ({
+  plugins: [react()],
+  base: '/',
   server: {
     port: 5173,
     strictPort: true,
@@ -32,8 +13,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
+    sourcemap: mode === 'development',
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
@@ -42,12 +26,13 @@ export default defineConfig({
       },
     },
   },
-  // For SPA routing - this ensures the base path is set correctly
-  base: './',
-  // This will be used to handle 404s in production
-  // The actual SPA fallback is handled by the _redirects file
-  publicDir: 'public',
-  css: {
-    devSourcemap: true,
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
   },
-});
+  // Add logging for debugging
+  define: {
+    'import.meta.env.BUILD_TIME': JSON.stringify(new Date().toISOString()),
+  },
+}));

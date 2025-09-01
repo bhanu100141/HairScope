@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
   <title>Hairscope Lab Entry</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="description" content="Hairscope Lab Entry System" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <style>
     /* Fallback styles in case Tailwind doesn't load */
     body, html {
@@ -18,13 +22,32 @@
       flex-direction: column;
     }
     /* Debug styles - will be visible if Tailwind isn't working */
-    .debug-border {
-      border: 1px solid red !important;
+    .debug-tailwind {
+      display: none;
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: red;
+      color: white;
+      padding: 1rem;
+      z-index: 9999;
     }
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800">
   <div id="root" class="debug-border"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <div class="debug-tailwind">
+    Tailwind is not working! Check your build configuration.
+  </div>
+  <script>
+    // Hide debug message if Tailwind is working
+    if (window.getComputedStyle(document.querySelector('.debug-tailwind')).display === 'none') {
+      document.querySelector('.debug-tailwind').remove();
+    }
+  </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Lab from './pages/Lab';
+import Test from './pages/Test';
 import { isExhausted, getRemainingMs, resetAll } from './lib/timer';
 
 const App: React.FC = () => {
@@ -9,15 +10,26 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const [sessionChecked, setSessionChecked] = useState(false);
   
+  // Debug: Log route changes
+  useEffect(() => {
+    console.log('[App] Route changed to:', location.pathname);
+  }, [location]);
+  
   // Check session status on route change
   useEffect(() => {
     console.log('[App] Path changed to:', location.pathname);
+    
+    // Skip session check for test route
+    if (location.pathname === '/test') {
+      setSessionChecked(true);
+      return;
+    }
     
     // Force reset session if coming from exit
     if (location.state?.fromExit) {
       console.log('[App] Handling exit flow, forcing session reset');
       resetAll();
-      window.history.replaceState({}, document.title); // Clear the state
+      window.history.replaceState({}, document.title);
       setSessionChecked(true);
       return;
     }
@@ -64,11 +76,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
-        <Route path="/" element={
-          location.pathname === '/lab' ? 
-          <Navigate to="/lab" replace /> : 
-          <Login />
-        } />
+        <Route path="/" element={<Login />} />
         <Route 
           path="/lab" 
           element={
@@ -77,7 +85,7 @@ const App: React.FC = () => {
             <Navigate to="/" replace />
           } 
         />
-        {/* Catch all other routes and redirect to home */}
+        <Route path="/test" element={<Test />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
