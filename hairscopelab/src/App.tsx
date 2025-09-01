@@ -28,32 +28,35 @@ const App: React.FC = () => {
       const isSessionValid = !isExhausted() && remaining > 0;
       
       console.log('[App] Session status:', {
-        path: location.pathname,
         isExhausted: isExhausted(),
         remainingMs: remaining,
-        hasActiveSession: isSessionValid
+        isValid: isSessionValid,
+        currentPath: location.pathname
       });
-      
-      // If trying to access lab without valid session, redirect to login
+
+      // If trying to access /lab without valid session, redirect to login
       if (location.pathname === '/lab' && !isSessionValid) {
         console.log('[App] No valid session, redirecting to login');
         navigate('/', { replace: true });
       }
-      
+
+      // If on login page with valid session, redirect to lab
+      if (location.pathname === '/' && isSessionValid) {
+        console.log('[App] Valid session found, redirecting to lab');
+        navigate('/lab', { replace: true });
+      }
+
       setSessionChecked(true);
     };
-    
+
     checkSession();
   }, [location.pathname, navigate, location.state]);
 
   // Show loading state while checking session
   if (!sessionChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p>Checking session...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
@@ -61,17 +64,20 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={
+          location.pathname === '/lab' ? 
+          <Navigate to="/lab" replace /> : 
+          <Login />
+        } />
         <Route 
           path="/lab" 
           element={
-            isExhausted() ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Lab />
-            )
+            !isExhausted() && getRemainingMs() > 0 ? 
+            <Lab /> : 
+            <Navigate to="/" replace />
           } 
         />
+        {/* Catch all other routes and redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
