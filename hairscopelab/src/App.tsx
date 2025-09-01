@@ -1,95 +1,57 @@
-import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { isValidSession, getSessionStatus, resetAll } from './lib/timer';
 import Login from './pages/Login';
 import Lab from './pages/Lab';
 import Test from './pages/Test';
-import { isExhausted, getRemainingMs, resetAll } from './lib/timer';
 
-const App: React.FC = () => {
-  const location = useLocation();
+function App() {
   const navigate = useNavigate();
-  const [sessionChecked, setSessionChecked] = useState(false);
-  
-  // Debug: Log route changes
+  const location = useLocation();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize session state on app load
   useEffect(() => {
-    console.log('[App] Route changed to:', location.pathname);
-  }, [location]);
-  
-  // Check session status on route change
+    console.log('[App] Initializing session state');
+    setIsInitialized(true);
+  }, []);
+
+  // Handle route changes and session validation
   useEffect(() => {
-    console.log('[App] Path changed to:', location.pathname);
-    
-    // Skip session check for test route
-    if (location.pathname === '/test') {
-      setSessionChecked(true);
+    if (!isInitialized) return;
+
+    console.log(`[App] Route changed to: ${location.pathname}`);
+    console.log(`[App] Path changed to: ${location.pathname}`);
+
+    // Skip session check for login page
+    if (location.pathname === '/') {
       return;
     }
-    
-    // Force reset session if coming from exit
-    if (location.state?.fromExit) {
-      console.log('[App] Handling exit flow, forcing session reset');
+
+    // Check session validity for protected routes
+    const sessionStatus = getSessionStatus();
+    console.log('[App] Session status:', { ...sessionStatus, currentPath: location.pathname });
+
+    if (!sessionStatus.isValid) {
+      console.log('[App] No valid session, redirecting to login');
       resetAll();
-      window.history.replaceState({}, document.title);
-      setSessionChecked(true);
-      return;
+      navigate('/', { replace: true });
     }
-    
-    // Normal session check
-    const checkSession = () => {
-      const remaining = getRemainingMs();
-      const isSessionValid = !isExhausted() && remaining > 0;
-      
-      console.log('[App] Session status:', {
-        isExhausted: isExhausted(),
-        remainingMs: remaining,
-        isValid: isSessionValid,
-        currentPath: location.pathname
-      });
+  }, [location.pathname, isInitialized, navigate]);
 
-      // If trying to access /lab without valid session, redirect to login
-      if (location.pathname === '/lab' && !isSessionValid) {
-        console.log('[App] No valid session, redirecting to login');
-        navigate('/', { replace: true });
-      }
-
-      // If on login page with valid session, redirect to lab
-      if (location.pathname === '/' && isSessionValid) {
-        console.log('[App] Valid session found, redirecting to lab');
-        navigate('/lab', { replace: true });
-      }
-
-      setSessionChecked(true);
-    };
-
-    checkSession();
-  }, [location.pathname, navigate, location.state]);
-
-  // Show loading state while checking session
-  if (!sessionChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+  if (!isInitialized) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route 
-          path="/lab" 
-          element={
-            !isExhausted() && getRemainingMs() > 0 ? 
-            <Lab /> : 
-            <Navigate to="/" replace />
-          } 
-        />
+        <Route path="/lab" element={<Lab />} />
         <Route path="/test" element={<Test />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
-};
+}
 
 export default App;
