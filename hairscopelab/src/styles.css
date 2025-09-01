@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Sliding doors base layout */
+.door {
+@apply fixed top-0 h-full w-1/2 bg-slate-900;
+z-index: 40;
+}
+.door-left { left: 0; }
+.door-right { right: 0; }
+.door-open-left { transform: translateX(-100%); }
+.door-open-right { transform: translateX(100%); }
+.door-transition { transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+
+/* Subtle glow for lock */
+.lock-glow {
+box-shadow: 0 0 30px rgba(101, 123, 255, 0.35);
+}
