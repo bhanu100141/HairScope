@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/lockanimation.tsx","./src/components/slidingdoors.tsx","./src/lib/auth.ts","./src/lib/timer.ts","./src/pages/lab.tsx","./src/pages/login.tsx","./src/pages/test.tsx"],"version":"5.9.2"}
