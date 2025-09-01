@@ -1,10 +1,13 @@
 const STORAGE_KEYS = {
   deadline: 'hs_deadline_ts',
-  exhausted: 'hs_exhausted'
+  exhausted: 'hs_exhausted',
+  session: 'hs_session'
 } as const;
 
 // Allocation in minutes (configure here)
 export const ALLOCATION_MINUTES = 10;
+
+const SESSION_DURATION = ALLOCATION_MINUTES * 60 * 1000; // 10 minutes in milliseconds
 
 export function now() {
   return Date.now();
@@ -21,12 +24,36 @@ export function setDeadlineOnce() {
   
   const existing = localStorage.getItem(STORAGE_KEYS.deadline);
   if (!existing) {
-    const deadline = now() + (ALLOCATION_MINUTES * 60 * 1000);
+    const deadline = now() + SESSION_DURATION;
     localStorage.setItem(STORAGE_KEYS.deadline, deadline.toString());
     console.log(`Session started. Expires in ${ALLOCATION_MINUTES} minutes.`);
   } else {
     console.log('Using existing deadline:', new Date(Number(existing)).toISOString());
   }
+}
+
+/**
+ * Starts a new session
+ */
+export function startSession(): void {
+  if (typeof window === 'undefined') return;
+  
+  const sessionData = {
+    startedAt: now(),
+    expiresAt: now() + SESSION_DURATION
+  };
+  sessionStorage.setItem(STORAGE_KEYS.session, JSON.stringify(sessionData));
+  sessionStorage.removeItem(STORAGE_KEYS.exhausted);
+}
+
+/**
+ * Ends the current session
+ */
+export function endSession(): void {
+  if (typeof window === 'undefined') return;
+  
+  sessionStorage.removeItem(STORAGE_KEYS.session);
+  sessionStorage.setItem(STORAGE_KEYS.exhausted, 'true');
 }
 
 /**
@@ -44,12 +71,20 @@ export function getDeadline(): number | null {
 export function getRemainingMs(): number {
   if (typeof window === 'undefined') return 0;
   
-  const dl = getDeadline();
-  if (!dl) return ALLOCATION_MINUTES * 60 * 1000; // If never started, full time remains
+  const sessionData = sessionStorage.getItem(STORAGE_KEYS.session);
+  if (!sessionData) {
+    const dl = getDeadline();
+    if (!dl) return SESSION_DURATION; // If never started, full time remains
+    return Math.max(0, dl - now());
+  }
   
-  const remaining = Math.max(0, dl - now());
-  console.debug(`Remaining time: ${Math.floor(remaining / 1000)}s`);
-  return remaining;
+  try {
+    const { expiresAt } = JSON.parse(sessionData);
+    return Math.max(0, expiresAt - now());
+  } catch (e) {
+    console.error('Error parsing session data:', e);
+    return 0;
+  }
 }
 
 /**
@@ -83,6 +118,12 @@ export function isExhausted(): boolean {
     return true;
   }
   
+  // Check if session storage is exhausted
+  if (sessionStorage.getItem(STORAGE_KEYS.exhausted) === 'true') {
+    console.log('Session storage is exhausted');
+    return true;
+  }
+  
   // Extra check: If no deadline is set but we're in the lab, consider it exhausted
   if (!deadline && window.location.pathname === '/lab') {
     console.log('No deadline set but in lab, marking as exhausted');
@@ -104,6 +145,8 @@ export function resetAll() {
   // Clear all timer-related data
   localStorage.removeItem(STORAGE_KEYS.deadline);
   localStorage.removeItem(STORAGE_KEYS.exhausted);
+  sessionStorage.removeItem(STORAGE_KEYS.session);
+  sessionStorage.removeItem(STORAGE_KEYS.exhausted);
   
   // Force clear by setting and immediately removing
   localStorage.setItem(STORAGE_KEYS.exhausted, '1');
@@ -144,4 +187,12 @@ export function getSessionStatus() {
     isExhausted: isExpired,
     expiresAt: getDeadline()
   };
+}
+
+// Initialize session state on module load
+if (typeof window !== 'undefined') {
+  const remaining = getRemainingMs();
+  if (remaining <= 0) {
+    resetAll();
+  }
 }
